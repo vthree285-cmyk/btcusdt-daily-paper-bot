@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BTCUSDT Paper Trading Dashboard</title>
+<style>
+body{font-family:Arial,sans-serif;background:#101827;color:#f3f4f6;margin:0;padding:24px}
+h1{font-size:25px}p{color:#aab4c5}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.card{background:#1d293b;padding:18px;border-radius:12px}
+.label{color:#aab4c5;font-size:13px}
+.value{font-size:25px;font-weight:bold;margin-top:10px}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
+th,td{text-align:left;padding:11px;border-bottom:1px solid #344155}
+.wrap{overflow-x:auto;background:#1d293b;padding:14px;border-radius:12px;margin-top:20px}
+.green{color:#4ade80}.red{color:#fb7185}
+</style>
+</head>
+<body>
+<h1>BTCUSDT Paper Trading</h1>
+<p>Frozen strategy · Daily candles · Long only · 0.24% assumed round-trip cost</p>
+
+<div class="grid">
+  <div class="card"><div class="label">Total trades</div><div class="value" id="count">—</div></div>
+  <div class="card"><div class="label">Win rate</div><div class="value" id="win">—</div></div>
+  <div class="card"><div class="label">Average net return</div><div class="value" id="avg">—</div></div>
+  <div class="card"><div class="label">Compounded return</div><div class="value" id="compound">—</div></div>
+  <div class="card"><div class="label">Maximum drawdown</div><div class="value" id="drawdown">—</div></div>
+</div>
+
+<div class="wrap">
+<h2>Trade history</h2>
+<table>
+<thead><tr><th>Signal date</th><th>Entry date</th><th>Entry</th><th>Exit</th><th>Net return</th><th>Result</th></tr></thead>
+<tbody id="trades"><tr><td colspan="6">Loading trade ledger...</td></tr></tbody>
+</table>
+</div>
+
+<p id="status">Loading data...</p>
+
+<script>
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  if(lines.length<2)return [];
+  const headers=lines[0].split(",");
+  return lines.slice(1).filter(Boolean).map(line=>{
+    const values=line.split(",");
+    return Object.fromEntries(headers.map((h,i)=>[h,values[i]]));
+  });
+}
+function pct(n){return (n>=0?"+":"")+n.toFixed(2)+"%"}
+async function load(){
+  try{
+    const response=await fetch("../data/trades.csv?update="+Date.now());
+    if(!response.ok)throw new Error("Trade ledger not available yet");
+    const trades=parseCSV(await response.text());
+    const returns=trades.map(t=>Number(t.net_return_pct)).filter(Number.isFinite);
+    const count=returns.length;
+    const wins=returns.filter(x=>x>0).length;
+    const avg=count?returns.reduce((a,b)=>a+b,0)/count:0;
+    const compounded=returns.reduce((a,b)=>a*(1+b/100),1);
+    let equity=1,peak=1,maxDD=0;
+    returns.forEach(r=>{
+      equity*=1+r/100;
+      peak=Math.max(peak,equity);
+      maxDD=Math.min(maxDD,(equity/peak-1)*100);
+    });
+    document.getElementById("count").textContent=count;
+    document.getElementById("win").textContent=count?pct(wins/count*100):"0.00%";
+    document.getElementById("avg").textContent=pct(avg);
+    document.getElementById("compound").textContent=pct((compounded-1)*100);
+    document.getElementById("drawdown").textContent=pct(maxDD);
+
+    const body=document.getElementById("trades");
+    body.innerHTML="";
+    trades.slice().reverse().forEach(t=>{
+      const r=Number(t.net_return_pct);
+      const tr=document.createElement("tr");
+      [t.signal_date,t.entry_date,t.entry_price,t.exit_price,pct(r),t.result]
+        .forEach((v,i)=>{
+          const td=document.createElement("td");
+          td.textContent=v;
+          if(i===4)td.className=r>=0?"green":"red";
+          tr.appendChild(td);
+        });
+      body.appendChild(tr);
+    });
+    if(!count)body.innerHTML='<tr><td colspan="6">No completed paper trades yet.</td></tr>';
+    document.getElementById("status").textContent="Ledger updated: "+new Date().toLocaleString();
+  }catch(e){
+    document.getElementById("status").textContent=e.message+". The first successful bot run will create the ledger.";
+  }
+}
+load();
+</script>
+</body>
+</html>
