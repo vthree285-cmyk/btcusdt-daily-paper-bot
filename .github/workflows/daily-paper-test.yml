@@ -28,11 +28,16 @@ jobs:
       - name: Run paper trading bot
         run: python bot.py
 
+      - name: Publish dashboard data
+        run: |
+          mkdir -p docs/data
+          cp data/trades.csv docs/data/trades.csv
+
       - name: Save updated paper trading data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/
+          git add data/ docs/data/
           if ! git diff --cached --quiet; then
             git commit -m "Update daily paper trading ledger"
             git push
