@@ -40,8 +40,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/ docs/data/
+                    git add data/ docs/data/
           if ! git diff --cached --quiet; then
             git commit -m "Update daily paper trading ledger"
+            git pull --rebase origin main
             git push
           fi
