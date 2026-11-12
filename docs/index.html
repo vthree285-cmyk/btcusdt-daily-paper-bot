@@ -53,7 +53,7 @@ function parseCSV(text){
 function pct(n){return (n>=0?"+":"")+n.toFixed(2)+"%"}
 async function load(){
   try{
-    const response=await fetch("../data/trades.csv?update="+Date.now());
+    const response=await fetch("./data/trades.csv?update="+Date.now());
     if(!response.ok)throw new Error("Trade ledger not available yet");
     const trades=parseCSV(await response.text());
     const returns=trades.map(t=>Number(t.net_return_pct)).filter(Number.isFinite);
