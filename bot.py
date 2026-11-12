@@ -21,7 +21,7 @@ CHECKPOINT = "2026-11-11"
 
 
 def get_candles():
-    url = "https://api.binance.com/api/v3/klines"
+    url = "https://data-api.binance.vision/api/v3/klines"
     response = requests.get(
         url,
         params={"symbol": SYMBOL, "interval": INTERVAL, "limit": 1000},
